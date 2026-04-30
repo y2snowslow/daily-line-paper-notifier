@@ -38,6 +38,7 @@ JST = timezone(timedelta(hours=9))
 
 GEMINI_MODEL = 'gemini-2.0-flash'
 GEMINI_URL = f'https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent'
+GEMINI_FALLBACK_MODELS = ['gemini-1.5-flash-latest', 'gemini-1.5-flash', 'gemini-pro']
 
 
 def now_jst() -> datetime:
@@ -111,14 +112,9 @@ arXiv ID: {arxiv_id}
 SVGは情報量を持たせ、ただの装飾ではなく **論文の中身を理解する助けになる図** にしてください。アブストに数値があれば数値を反映してください。"""
 
 
-def call_gemini(api_key: str, paper: dict) -> dict:
-    prompt = GEMINI_PROMPT_TEMPLATE.format(
-        title=paper['title'],
-        authors=', '.join(paper['authors']) or 'N/A',
-        pub_date=paper['pub_date'],
-        arxiv_id=paper['arxiv_id'],
-        abstract=paper['abstract'],
-    )
+def _call_one_model(api_key: str, model: str, prompt: str) -> dict:
+    """Call a specific Gemini model. Returns parsed dict or raises."""
+    url = f'https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}'
     payload = {
         'contents': [{'parts': [{'text': prompt}]}],
         'generationConfig': {
@@ -128,32 +124,68 @@ def call_gemini(api_key: str, paper: dict) -> dict:
         },
     }
     body = json.dumps(payload).encode('utf-8')
-    url = f'{GEMINI_URL}?key={api_key}'
     req = urllib.request.Request(
         url,
         data=body,
         headers={'Content-Type': 'application/json'},
         method='POST',
     )
-    print(f'[{now_jst().isoformat()}] Calling Gemini ({GEMINI_MODEL})...')
-    with urllib.request.urlopen(req, timeout=120) as resp:
-        result = json.loads(resp.read().decode('utf-8'))
-
+    print(f'[{now_jst().isoformat()}] Calling Gemini ({model})...')
     try:
-        text = result['candidates'][0]['content']['parts'][0]['text']
-    except (KeyError, IndexError) as e:
-        print(f'Unexpected Gemini response: {json.dumps(result)[:1000]}', file=sys.stderr)
+        with urllib.request.urlopen(req, timeout=120) as resp:
+            result = json.loads(resp.read().decode('utf-8'))
+    except urllib.error.HTTPError as ex:
+        err_body = ex.read().decode('utf-8', errors='replace')
+        print(f'  HTTP {ex.code} from {model}: {err_body[:500]}', file=sys.stderr)
         raise
 
-    # Strip code fences if any
+    if 'candidates' not in result or not result['candidates']:
+        print(f'  No candidates in response: {json.dumps(result)[:500]}', file=sys.stderr)
+        raise RuntimeError('Gemini returned no candidates')
+
+    cand = result['candidates'][0]
+    finish = cand.get('finishReason', 'UNKNOWN')
+    if finish not in ('STOP', 'MAX_TOKENS'):
+        print(f'  Bad finishReason: {finish}', file=sys.stderr)
+    try:
+        text = cand['content']['parts'][0]['text']
+    except (KeyError, IndexError):
+        print(f'  Unexpected response shape: {json.dumps(result)[:500]}', file=sys.stderr)
+        raise
+
     text = text.strip()
     if text.startswith('```'):
         text = text.split('\n', 1)[1] if '\n' in text else text
         text = text.rsplit('```', 1)[0]
 
-    data = json.loads(text)
-    print(f'[{now_jst().isoformat()}] Gemini OK (background={len(data.get("background",""))}, explanation={len(data.get("explanation",""))})')
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError as ex:
+        print(f'  JSON parse failed: {ex}\n  Raw text (first 800 chars): {text[:800]}', file=sys.stderr)
+        raise
+
+    print(f'  OK from {model} (bg={len(data.get("background",""))}, exp={len(data.get("explanation",""))})')
     return data
+
+
+def call_gemini(api_key: str, paper: dict) -> dict:
+    prompt = GEMINI_PROMPT_TEMPLATE.format(
+        title=paper['title'],
+        authors=', '.join(paper['authors']) or 'N/A',
+        pub_date=paper['pub_date'],
+        arxiv_id=paper['arxiv_id'],
+        abstract=paper['abstract'],
+    )
+    models_to_try = [GEMINI_MODEL] + GEMINI_FALLBACK_MODELS
+    last_err = None
+    for model in models_to_try:
+        try:
+            return _call_one_model(api_key, model, prompt)
+        except Exception as e:
+            last_err = e
+            print(f'  -> {model} failed: {type(e).__name__}: {e}', file=sys.stderr)
+            continue
+    raise RuntimeError(f'All Gemini models failed. Last error: {last_err}')
 
 
 def fallback_commentary(paper: dict) -> dict:
