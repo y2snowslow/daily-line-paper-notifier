@@ -270,6 +270,11 @@ def write_html(paper: dict, today: str) -> None:
     out = docs / 'index.html'
     out.write_text(generate_html(paper, today), encoding='utf-8')
     print(f'Wrote {out}  ({out.stat().st_size} bytes)')
+    # Disable Jekyll processing so curly braces in CSS/JS don't break the build
+    nojekyll = docs / '.nojekyll'
+    if not nojekyll.exists():
+        nojekyll.write_text('', encoding='utf-8')
+        print(f'Wrote {nojekyll}')
 
 
 def github_pages_url() -> str:
