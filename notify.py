@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
 """
-Daily LINE notification + GitHub Pages publish.
+Daily LINE notification + GitHub Pages publish with Gemini-generated commentary.
 
 Each run:
   1. Queries arXiv for the latest EV inverter / power module paper
-  2. Generates docs/index.html (mobile-friendly, with SVG hero + Chart.js)
-  3. Sends LINE notification with the GitHub Pages URL
+  2. Asks Gemini 2.0 Flash to generate Japanese summary, explanation, and 2 SVG figures
+  3. Generates docs/index.html (mobile-friendly) with the commentary embedded
+  4. Sends LINE notification with the GitHub Pages URL
 
 Reads from env (set as GitHub Secrets / Variables):
   LINE_CHANNEL_ACCESS_TOKEN  - required
   LINE_USER_ID               - required
+  GEMINI_API_KEY             - required
   GITHUB_REPOSITORY          - auto-set by Actions: "owner/repo"
 """
 import os
@@ -34,11 +36,15 @@ ARXIV_URL = (
 NS = {'atom': 'http://www.w3.org/2005/Atom'}
 JST = timezone(timedelta(hours=9))
 
+GEMINI_MODEL = 'gemini-2.0-flash'
+GEMINI_URL = f'https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent'
+
 
 def now_jst() -> datetime:
     return datetime.now(JST)
 
 
+# ---------- arXiv ----------
 def fetch_latest_paper():
     print(f'[{now_jst().isoformat()}] Querying arXiv...')
     with urllib.request.urlopen(ARXIV_URL, timeout=30) as resp:
@@ -53,7 +59,6 @@ def fetch_latest_paper():
     title = ' '.join((e.findtext('atom:title', '', NS) or '').split())
     arxiv_id = (e.findtext('atom:id', '', NS) or '').replace('http://arxiv.org/abs/', '').strip()
     abstract = ' '.join((e.findtext('atom:summary', '', NS) or '').split())
-    summary = abstract[:180] + '...' if len(abstract) > 180 else abstract
 
     authors = []
     for a in e.findall('atom:author', NS):
@@ -72,12 +77,109 @@ def fetch_latest_paper():
         'title': title,
         'arxiv_id': arxiv_id,
         'abstract': abstract,
-        'summary': summary,
         'authors': authors,
         'pub_date': pub_date,
     }
 
 
+# ---------- Gemini ----------
+GEMINI_PROMPT_TEMPLATE = """あなたはEVパワーエレクトロニクス分野(SiC/GaNパワーモジュール、トラクションインバータ、モータ駆動回路)の専門研究者です。以下の arXiv 論文のアブストラクトを読み、日本人エンジニア向けに詳しい解説とビジュアライズを作成してください。
+
+論文タイトル: {title}
+著者: {authors}
+公開日: {pub_date}
+arXiv ID: {arxiv_id}
+
+アブストラクト(英語原文):
+\"\"\"
+{abstract}
+\"\"\"
+
+以下のJSON形式で返答してください。**JSON以外の前置き・後置きは禁止**:
+
+{{
+  "summary_short": "80字以内の超要約 (LINE通知に使う)",
+  "background": "背景・課題の日本語解説 (200-300字、業界の何が問題で、なぜこの研究が必要か)",
+  "explanation": "手法・成果の日本語解説 (400-600字、技術的詳細・回路トポロジー・制御則・デバイス選定・定量結果まで踏み込む)",
+  "implications": "実用上の示唆 (200-300字、量産設計への含意、限界、他手法との比較)",
+  "svg_main": "提案手法または論文の中心概念を可視化したSVG文字列。<svg ...>...</svg> の完全な形で返す。必ず viewBox=\\"0 0 720 280\\" を指定。色は #c75b00 (オレンジ強調), #1a1a1a (黒文字), #fff5e6 (薄オレンジ背景), #e3e0d8 (枠線), #fff (白) を使用。テキストは font-size 10-14。日本語混在可。要素を整理して情報量がある図にすること",
+  "fig1_caption": "svg_main の解説キャプション (100-150字、技術的)",
+  "svg_secondary": "結果・効果・比較を可視化したSVG文字列。バーチャート・折れ線・概念図など適切なものを選択。viewBox=\\"0 0 720 280\\" を指定。同じ色パレット使用",
+  "fig2_caption": "svg_secondary の解説キャプション (100-150字)"
+}}
+
+SVGは情報量を持たせ、ただの装飾ではなく **論文の中身を理解する助けになる図** にしてください。アブストに数値があれば数値を反映してください。"""
+
+
+def call_gemini(api_key: str, paper: dict) -> dict:
+    prompt = GEMINI_PROMPT_TEMPLATE.format(
+        title=paper['title'],
+        authors=', '.join(paper['authors']) or 'N/A',
+        pub_date=paper['pub_date'],
+        arxiv_id=paper['arxiv_id'],
+        abstract=paper['abstract'],
+    )
+    payload = {
+        'contents': [{'parts': [{'text': prompt}]}],
+        'generationConfig': {
+            'temperature': 0.6,
+            'responseMimeType': 'application/json',
+            'maxOutputTokens': 8192,
+        },
+    }
+    body = json.dumps(payload).encode('utf-8')
+    url = f'{GEMINI_URL}?key={api_key}'
+    req = urllib.request.Request(
+        url,
+        data=body,
+        headers={'Content-Type': 'application/json'},
+        method='POST',
+    )
+    print(f'[{now_jst().isoformat()}] Calling Gemini ({GEMINI_MODEL})...')
+    with urllib.request.urlopen(req, timeout=120) as resp:
+        result = json.loads(resp.read().decode('utf-8'))
+
+    try:
+        text = result['candidates'][0]['content']['parts'][0]['text']
+    except (KeyError, IndexError) as e:
+        print(f'Unexpected Gemini response: {json.dumps(result)[:1000]}', file=sys.stderr)
+        raise
+
+    # Strip code fences if any
+    text = text.strip()
+    if text.startswith('```'):
+        text = text.split('\n', 1)[1] if '\n' in text else text
+        text = text.rsplit('```', 1)[0]
+
+    data = json.loads(text)
+    print(f'[{now_jst().isoformat()}] Gemini OK (background={len(data.get("background",""))}, explanation={len(data.get("explanation",""))})')
+    return data
+
+
+def fallback_commentary(paper: dict) -> dict:
+    """If Gemini fails, return a basic structure so the page still builds."""
+    abstract = paper['abstract']
+    short = abstract[:80] + '...' if len(abstract) > 80 else abstract
+    placeholder_svg = (
+        '<svg viewBox="0 0 720 280" xmlns="http://www.w3.org/2000/svg">'
+        '<rect width="720" height="280" fill="#fff5e6"/>'
+        '<text x="360" y="140" font-size="14" text-anchor="middle" fill="#c75b00">'
+        'Gemini commentary unavailable'
+        '</text></svg>'
+    )
+    return {
+        'summary_short': short,
+        'background': '(Gemini API応答なし — 原文要旨を参照してください)',
+        'explanation': abstract,
+        'implications': '(同上)',
+        'svg_main': placeholder_svg,
+        'fig1_caption': '図の生成に失敗しました',
+        'svg_secondary': placeholder_svg,
+        'fig2_caption': '図の生成に失敗しました',
+    }
+
+
+# ---------- HTML ----------
 HTML_TEMPLATE = '''<!doctype html>
 <html lang="ja">
 <head>
@@ -147,15 +249,14 @@ HTML_TEMPLATE = '''<!doctype html>
     margin-top: 10px;
     line-height: 1.55;
   }}
-  .abstract {{
-    background: #ffffff;
-    border: 1px solid #e3e0d8;
-    border-radius: 10px;
-    padding: 16px;
-    font-size: 14px;
-    color: #1a1a1a;
-    line-height: 1.7;
-    white-space: normal;
+  .figure .caption b {{ color: #c75b00; }}
+  .pull {{
+    background: #fff5e6;
+    border-left: 4px solid #c75b00;
+    padding: 12px 14px;
+    border-radius: 4px;
+    margin: 14px 0;
+    font-size: 14.5px;
   }}
   .links {{
     display: flex;
@@ -182,6 +283,24 @@ HTML_TEMPLATE = '''<!doctype html>
     border-top: 1px solid #e3e0d8;
     line-height: 1.6;
   }}
+  details.original-abstract {{
+    margin: 18px 0;
+    background: #fff;
+    border: 1px solid #e3e0d8;
+    border-radius: 10px;
+    padding: 12px 16px;
+  }}
+  details.original-abstract summary {{
+    cursor: pointer;
+    font-size: 13px;
+    color: #555;
+    font-weight: 600;
+  }}
+  details.original-abstract p {{
+    font-size: 13px;
+    color: #444;
+    line-height: 1.7;
+  }}
   @media (max-width: 480px) {{
     h1.title {{ font-size: 19px; }}
     h2 {{ font-size: 16px; }}
@@ -198,44 +317,33 @@ HTML_TEMPLATE = '''<!doctype html>
     <div><b>arXiv ID</b>: {arxiv_id} ・ <b>公開日</b>: {pub_date}</div>
   </div>
 
-  <h2>イメージ</h2>
+  <div class="pull">{summary_short}</div>
+
+  <h2>背景・課題</h2>
+  <p>{background}</p>
+
+  <h2>提案手法・主要構成</h2>
   <div class="figure">
-    <svg viewBox="0 0 720 260" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-          <path d="M0,0 L10,5 L0,10 z" fill="#1a1a1a"/>
-        </marker>
-      </defs>
-      <rect x="40" y="80" width="100" height="100" fill="#fff5e6" stroke="#c75b00" stroke-width="1.5" rx="6"/>
-      <text x="90" y="120" font-size="13" text-anchor="middle" fill="#c75b00" font-weight="700">Battery</text>
-      <text x="90" y="138" font-size="11" text-anchor="middle" fill="#555">DC</text>
-      <line x1="140" y1="130" x2="190" y2="130" stroke="#1a1a1a" stroke-width="2" marker-end="url(#arr)"/>
-      <rect x="200" y="60" width="200" height="140" fill="#1a1a1a" rx="8"/>
-      <text x="300" y="90" font-size="14" text-anchor="middle" fill="#fafaf7" font-weight="700">Inverter</text>
-      <text x="300" y="108" font-size="11" text-anchor="middle" fill="#fafaf7">SiC / GaN Power Module</text>
-      <g fill="#c75b00">
-        <rect x="220" y="120" width="22" height="18" rx="2"/>
-        <rect x="254" y="120" width="22" height="18" rx="2"/>
-        <rect x="288" y="120" width="22" height="18" rx="2"/>
-        <rect x="322" y="120" width="22" height="18" rx="2"/>
-        <rect x="356" y="120" width="22" height="18" rx="2"/>
-      </g>
-      <text x="300" y="170" font-size="11" text-anchor="middle" fill="#fafaf7">3-phase switching</text>
-      <line x1="400" y1="120" x2="450" y2="120" stroke="#c75b00" stroke-width="1.5"/>
-      <line x1="400" y1="135" x2="450" y2="135" stroke="#c75b00" stroke-width="1.5"/>
-      <line x1="400" y1="150" x2="450" y2="150" stroke="#c75b00" stroke-width="1.5"/>
-      <text x="425" y="105" font-size="10" text-anchor="middle" fill="#555">3φ AC</text>
-      <circle cx="490" cy="135" r="32" fill="#fff5e6" stroke="#c75b00" stroke-width="1.5"/>
-      <text x="490" y="140" font-size="16" text-anchor="middle" fill="#c75b00" font-weight="700">M</text>
-      <text x="490" y="180" font-size="11" text-anchor="middle" fill="#555">Traction Motor</text>
-      <text x="40" y="50" font-size="13" font-weight="700" fill="#1a1a1a">EV パワートレイン全体像</text>
-      <text x="40" y="220" font-size="11" fill="#888">本日の論文はこのEVトラクションインバータ領域に関するもの</text>
-    </svg>
-    <div class="caption">EV(電気自動車)用トラクションインバータの基本構成図。本日の論文はこの領域の最新研究です。</div>
+    {svg_main}
+    <div class="caption"><b>Fig.1</b>: {fig1_caption}</div>
   </div>
 
-  <h2>論文要旨(原文)</h2>
-  <div class="abstract">{abstract}</div>
+  <h2>手法と成果の解説</h2>
+  <p>{explanation}</p>
+
+  <h2>結果・効果のビジュアライズ</h2>
+  <div class="figure">
+    {svg_secondary}
+    <div class="caption"><b>Fig.2</b>: {fig2_caption}</div>
+  </div>
+
+  <h2>実用への示唆</h2>
+  <p>{implications}</p>
+
+  <details class="original-abstract">
+    <summary>原文アブストラクト(英語)を表示</summary>
+    <p>{abstract}</p>
+  </details>
 
   <div class="links">
     <a href="https://arxiv.org/abs/{arxiv_id}" target="_blank" rel="noopener">arXiv abstract</a>
@@ -243,7 +351,7 @@ HTML_TEMPLATE = '''<!doctype html>
     <a class="secondary" href="https://arxiv.org/html/{arxiv_id}" target="_blank" rel="noopener">HTML(原図)</a>
   </div>
 
-  <p class="footer-note">📝 このページは GitHub Actions が毎日21:05(JST)に arXiv から自動取得した最新論文を掲載しています。<br>
+  <p class="footer-note">📝 解説と図はGemini AIが論文アブストから生成しています(自動生成のため細部に誤りがある場合があります — 詳細は arXiv 原論文を参照してください)。<br>
   生成日時: {generated_at}
   </p>
 </div>
@@ -252,7 +360,7 @@ HTML_TEMPLATE = '''<!doctype html>
 '''
 
 
-def generate_html(paper: dict, today: str) -> str:
+def build_html(paper: dict, commentary: dict, today: str) -> str:
     return HTML_TEMPLATE.format(
         today=html.escape(today),
         title=html.escape(paper['title']),
@@ -260,23 +368,31 @@ def generate_html(paper: dict, today: str) -> str:
         arxiv_id=html.escape(paper['arxiv_id']),
         pub_date=html.escape(paper['pub_date']),
         abstract=html.escape(paper['abstract']),
+        summary_short=html.escape(commentary.get('summary_short', '')),
+        background=html.escape(commentary.get('background', '')),
+        explanation=html.escape(commentary.get('explanation', '')),
+        implications=html.escape(commentary.get('implications', '')),
+        svg_main=commentary.get('svg_main', ''),  # raw SVG, not escaped
+        fig1_caption=html.escape(commentary.get('fig1_caption', '')),
+        svg_secondary=commentary.get('svg_secondary', ''),
+        fig2_caption=html.escape(commentary.get('fig2_caption', '')),
         generated_at=html.escape(now_jst().strftime('%Y-%m-%d %H:%M JST')),
     )
 
 
-def write_html(paper: dict, today: str) -> None:
+def write_html(html_text: str) -> None:
     docs = Path('docs')
     docs.mkdir(exist_ok=True)
     out = docs / 'index.html'
-    out.write_text(generate_html(paper, today), encoding='utf-8')
+    out.write_text(html_text, encoding='utf-8')
     print(f'Wrote {out}  ({out.stat().st_size} bytes)')
-    # Disable Jekyll processing so curly braces in CSS/JS don't break the build
     nojekyll = docs / '.nojekyll'
     if not nojekyll.exists():
         nojekyll.write_text('', encoding='utf-8')
         print(f'Wrote {nojekyll}')
 
 
+# ---------- LINE ----------
 def github_pages_url() -> str:
     repo = os.environ.get('GITHUB_REPOSITORY', '')
     if '/' not in repo:
@@ -288,7 +404,6 @@ def github_pages_url() -> str:
 def send_line(token: str, user_id: str, message: str) -> None:
     payload = {'to': user_id, 'messages': [{'type': 'text', 'text': message}]}
     body = json.dumps(payload, ensure_ascii=False).encode('utf-8')
-
     req = urllib.request.Request(
         'https://api.line.me/v2/bot/message/push',
         data=body,
@@ -308,11 +423,13 @@ def send_line(token: str, user_id: str, message: str) -> None:
         sys.exit(1)
 
 
+# ---------- main ----------
 def main() -> None:
-    token = os.environ.get('LINE_CHANNEL_ACCESS_TOKEN')
-    user_id = os.environ.get('LINE_USER_ID')
-    if not token or not user_id:
-        print('ERROR: LINE_CHANNEL_ACCESS_TOKEN / LINE_USER_ID not set', file=sys.stderr)
+    line_token = os.environ.get('LINE_CHANNEL_ACCESS_TOKEN')
+    line_uid   = os.environ.get('LINE_USER_ID')
+    gemini_key = os.environ.get('GEMINI_API_KEY')
+    if not (line_token and line_uid and gemini_key):
+        print('ERROR: LINE_CHANNEL_ACCESS_TOKEN / LINE_USER_ID / GEMINI_API_KEY env vars missing', file=sys.stderr)
         sys.exit(1)
 
     paper = fetch_latest_paper()
@@ -320,8 +437,14 @@ def main() -> None:
         print('No paper found. Skip.')
         return
 
+    try:
+        commentary = call_gemini(gemini_key, paper)
+    except Exception as e:
+        print(f'Gemini call failed, falling back: {e}', file=sys.stderr)
+        commentary = fallback_commentary(paper)
+
     today = now_jst().strftime('%Y-%m-%d')
-    write_html(paper, today)
+    write_html(build_html(paper, commentary, today))
 
     pages = github_pages_url()
     msg_lines = [
@@ -329,17 +452,15 @@ def main() -> None:
         '',
         paper['title'],
         '',
-        f"公開日: {paper['pub_date']}",
-        '',
-        f"要旨: {paper['summary']}",
+        commentary.get('summary_short', ''),
         '',
     ]
     if pages:
-        msg_lines += ['▼ 図入り詳細(モバイル対応)', pages, '']
+        msg_lines += ['▼ 図入り解説(モバイル対応)', pages, '']
     msg_lines += ['▼ arXiv 原論文', f"https://arxiv.org/abs/{paper['arxiv_id']}"]
     msg = '\n'.join(msg_lines)
 
-    send_line(token, user_id, msg)
+    send_line(line_token, line_uid, msg)
     print(f'Done: {paper["title"]}')
 
 
