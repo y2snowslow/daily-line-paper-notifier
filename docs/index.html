@@ -135,28 +135,104 @@
     <div><b>arXiv ID</b>: 2511.08405v1 ・ <b>公開日</b>: 2025-11-12</div>
   </div>
 
-  <div class="pull">The multi-phase inverter has become more complicated, particularly in an Electri...</div>
+  <div class="pull">EV多相インバータ向け、SiCモジュール故障時の短絡・放電保護手法。信頼性向上に貢献。</div>
 
   <h2>背景・課題</h2>
-  <p>(Gemini API応答なし — 原文要旨を参照してください)</p>
+  <p>電気自動車(EV)のパワートレインでは、高効率・高出力化のために多相インバータの採用が進んでいます。特に、SiCパワーモジュールはこれらの要求に応える鍵となりますが、故障時の信頼性確保が急務です。多相インバータシステムにおいて、短絡（ショートサーキット）故障が発生した場合、適切に保護されなければ、連鎖的な故障や部品の恒久的な損傷を引き起こす可能性があります。このため、EVのような高い安全性が求められる用途では、故障発生時にもシステム全体の信頼性を維持できる、堅牢な保護システムの開発が不可欠となっています。</p>
 
   <h2>提案手法・主要構成</h2>
   <div class="figure">
-    <svg viewBox="0 0 720 280" xmlns="http://www.w3.org/2000/svg"><rect width="720" height="280" fill="#fff5e6"/><text x="360" y="140" font-size="14" text-anchor="middle" fill="#c75b00">Gemini commentary unavailable</text></svg>
-    <div class="caption"><b>Fig.1</b>: 図の生成に失敗しました</div>
+    <svg viewBox="0 0 720 280" xmlns="http://www.w3.org/2000/svg" style="background-color:#fff5e6; border: 1px solid #e3e0d8;">
+  <rect width="720" height="280" fill="#fff5e6"/>
+  <text x="20" y="30" font-size="16" font-weight="bold" fill="#1a1a1a">多相インバータ 故障保護メカニズム</text>
+
+  <g transform="translate(50, 70)">
+    <rect x="0" y="0" width="150" height="100" fill="#ffffff" stroke="#1a1a1a" stroke-width="1" rx="5"/>
+    <text x="10" y="25" font-size="12" fill="#1a1a1a">正常動作</text>
+    <text x="10" y="45" font-size="12" fill="#1a1a1a">各相独立</text>
+    <text x="10" y="65" font-size="12" fill="#1a1a1a">電力供給</text>
+  </g>
+
+  <g transform="translate(250, 70)">
+    <rect x="0" y="0" width="200" height="120" fill="#fff5e6" stroke="#c75b00" stroke-width="2" rx="5"/>
+    <text x="10" y="25" font-size="12" fill="#1a1a1a">故障発生 (例: 相A)</text>
+    <text x="10" y="45" font-size="12" fill="#c75b00" font-weight="bold">中央検出</text>
+    <text x="10" y="65" font-size="12" fill="#c75b00" font-weight="bold">アクティブ短絡 (相A)</text>
+    <text x="10" y="85" font-size="12" fill="#c75b00" font-weight="bold">制御放電</text>
+    <text x="10" y="105" font-size="12" fill="#1a1a1a">他相保護</text>
+  </g>
+
+  <g transform="translate(520, 70)">
+    <rect x="0" y="0" width="150" height="100" fill="#ffffff" stroke="#1a1a1a" stroke-width="1" rx="5"/>
+    <text x="10" y="25" font-size="12" fill="#1a1a1a">保護完了</text>
+    <text x="10" y="45" font-size="12" fill="#1a1a1a">影響限定</text>
+    <text x="10" y="65" font-size="12" fill="#1a1a1a">システム継続</text>
+    <text x="10" y="85" font-size="12" fill="#1a1a1a">(または安全停止)</text>
+  </g>
+
+  <line x1="150" y1="120" x2="250" y2="120" stroke="#1a1a1a" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="450" y1="120" x2="520" y2="120" stroke="#1a1a1a" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="0" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L5,3 z" fill="#1a1a1a" />
+    </marker>
+  </defs>
+</svg>
+    <div class="caption"><b>Fig.1</b>: 提案手法の概念図。多相インバータで故障が発生した場合、中央検出システムがこれを検知し、故障相をアクティブに短絡させ、エネルギーを安全に放電することで、他の健全な相への影響を防ぎ、システム全体の信頼性を維持する。</div>
   </div>
 
   <h2>手法と成果の解説</h2>
-  <p>The multi-phase inverter has become more complicated, particularly in an Electric Vehicle (EV)&#x27;s power train, which requires a robust fault protection system. The proposed active short circuit and safe discharge mechanisms are also included in this work, dedicated to multi-phase converters in failure conditions. With silicon carbide (SiC) power modules increasingly used in high efficiency and high-power applications, the reliability under fault conditions is an extremely important factor. Cascading failures and permanent damage will occur in multi phase inverter systems if short circuit faults are not prevented. The proposed method combines one centralized short circuit detection, active phase shorting and controlled discharge to make these structures more robust. The on chip active short circuit mechanism isolates the affected phases quickly preventing faults from spreading to other areas of the inverter and the safe discharge mechanism controls energy discharged in fault scenarios, which reduces the thermal stress placed on essential components. The experimental results show that the proposed mechanisms can effectively enhance a fault detection performance, system response during faults, and the operation as whole at faults over the several existing methods. These mechanisms are demonstrated to be very important for enhancing the safety and reliability of multiphase inverters, especially for critical applications of such inverters as EV where high operational security is required.</p>
+  <p>本研究では、多相インバータにおける短絡故障発生時の保護手法として、「中央集権的な短絡検出」「アクティブ相短絡」「制御された放電」を組み合わせたシステムを提案しています。このシステムは、故障が発生した相を迅速に特定し、オンチップのアクティブ短絡機構によって影響を受けた相を即座に短絡させます。これにより、故障が他のインバータ部分へ波及するのを防ぎます。さらに、制御された放電機構は、故障シナリオにおけるエネルギーの放出を管理し、主要部品にかかる熱的ストレスを低減します。SiCパワーモジュールは、その高速スイッチング特性と低オン抵抗から、高効率・高出力アプリケーションに適していますが、短絡故障時には非常に大きな電流が流れるため、迅速かつ効果的な保護が不可欠です。提案手法は、これらの課題に対し、故障検出性能、故障時のシステム応答、および全体的な運用性を既存手法と比較して向上させることを実験的に示しています。</p>
 
   <h2>結果・効果のビジュアライズ</h2>
   <div class="figure">
-    <svg viewBox="0 0 720 280" xmlns="http://www.w3.org/2000/svg"><rect width="720" height="280" fill="#fff5e6"/><text x="360" y="140" font-size="14" text-anchor="middle" fill="#c75b00">Gemini commentary unavailable</text></svg>
-    <div class="caption"><b>Fig.2</b>: 図の生成に失敗しました</div>
+    <svg viewBox="0 0 720 280" xmlns="http://www.w3.org/2000/svg" style="background-color:#fff5e6; border: 1px solid #e3e0d8;">
+  <text x="20" y="30" font-size="16" font-weight="bold" fill="#1a1a1a">提案手法 vs 既存手法：故障応答比較</text>
+
+  <g transform="translate(50, 70)">
+    <text x="0" y="20" font-size="12" fill="#1a1a1a">故障発生</text>
+    <text x="100" y="20" font-size="12" fill="#1a1a1a">提案手法 (アクティブ保護)</text>
+    <text x="350" y="20" font-size="12" fill="#1a1a1a">既存手法 (例: ヒューズ)</text>
+
+    <line x1="0" y1="30" x2="600" y2="30" stroke="#1a1a1a" stroke-width="1" />
+
+    <!-- 提案手法 -->
+    <rect x="100" y="40" width="50" height="150" fill="#c75b00"/>
+    <text x="105" y="200" font-size="12" fill="#fff">短絡</text>
+    <text x="105" y="215" font-size="12" fill="#fff">検出</text>
+    <text x="105" y="230" font-size="12" fill="#fff">放電</text>
+    <text x="105" y="245" font-size="12" fill="#fff">応答</text>
+    <line x1="125" y1="40" x2="125" y2="250" stroke="#1a1a1a" stroke-width="1"/>
+    <text x="125" y="265" font-size="10" fill="#1a1a1a">T1 (高速)</text>
+
+    <!-- 既存手法 -->
+    <rect x="350" y="40" width="150" height="150" fill="#e3e0d8"/>
+    <text x="360" y="100" font-size="12" fill="#1a1a1a">溶断</text>
+    <text x="360" y="115" font-size="12" fill="#1a1a1a">遅延</text>
+    <text x="360" y="130" font-size="12" fill="#1a1a1a">熱影響</text>
+    <text x="360" y="145" font-size="12" fill="#1a1a1a">応答</text>
+    <line x1="425" y1="40" x2="425" y2="250" stroke="#1a1a1a" stroke-width="1"/>
+    <text x="425" y="265" font-size="10" fill="#1a1a1a">T2 (低速)</text>
+
+    <text x="250" y="275" font-size="10" fill="#1a1a1a">時間経過 →</text>
+    <text x="0" y="100" font-size="12" fill="#1a1a1a">応答</text>
+    <text x="0" y="120" font-size="12" fill="#1a1a1a">速度</text>
+    <text x="0" y="140" font-size="12" fill="#1a1a1a">熱</text>
+    <text x="0" y="160" font-size="12" fill="#1a1a1a">影響</text>
+
+    <text x="160" y="120" font-size="10" fill="#1a1a1a">速い</text>
+    <text x="510" y="120" font-size="10" fill="#1a1a1a">遅い</text>
+
+    <text x="160" y="160" font-size="10" fill="#1a1a1a">少ない</text>
+    <text x="510" y="160" font-size="10" fill="#1a1a1a">多い</text>
+  </g>
+</svg>
+    <div class="caption"><b>Fig.2</b>: 提案手法と既存の保護手法（例：ヒューズ）との応答速度および影響の比較。提案手法は、故障発生から保護動作開始までの時間が短く（T1 &lt; T2）、故障電流の遮断とエネルギー制御により、部品への熱的影響を最小限に抑えることができる。これにより、システム全体の信頼性と安全性が向上する。</div>
   </div>
 
   <h2>実用への示唆</h2>
-  <p>(同上)</p>
+  <p>本研究で提案されたアクティブ短絡および安全放電機構は、EV用多相インバータの信頼性と安全性を大幅に向上させる可能性を秘めています。量産設計においては、SiCパワーモジュールの保護だけでなく、システム全体のダウンタイム削減や、故障時の修理コスト低減にも繋がります。ただし、追加の検出・制御回路が必要となるため、コストや実装スペース、制御の複雑性の増加といったトレードオフも考慮する必要があります。既存の受動的な保護（ヒューズなど）や、より単純なアクティブ保護と比較して、迅速な故障隔離とエネルギー管理能力に優れている点が強みです。EV以外にも、産業用モーター駆動や再生可能エネルギーシステムなど、高信頼性が要求される多相インバータ応用への展開が期待されます。</p>
 
   <details class="original-abstract">
     <summary>原文アブストラクト(英語)を表示</summary>
@@ -170,7 +246,7 @@
   </div>
 
   <p class="footer-note">📝 解説と図はGemini AIが論文アブストから生成しています(自動生成のため細部に誤りがある場合があります — 詳細は arXiv 原論文を参照してください)。<br>
-  生成日時: 2026-04-30 20:51 JST
+  生成日時: 2026-04-30 20:54 JST
   </p>
 </div>
 </body>
