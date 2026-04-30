@@ -36,9 +36,13 @@ ARXIV_URL = (
 NS = {'atom': 'http://www.w3.org/2005/Atom'}
 JST = timezone(timedelta(hours=9))
 
-GEMINI_MODEL = 'gemini-2.0-flash'
+GEMINI_MODEL = 'gemini-2.5-flash-lite'  # current free-tier friendly
 GEMINI_URL = f'https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent'
-GEMINI_FALLBACK_MODELS = ['gemini-1.5-flash-latest', 'gemini-1.5-flash', 'gemini-pro']
+GEMINI_FALLBACK_MODELS = [
+    'gemini-2.5-flash',
+    'gemini-flash-latest',
+    'gemini-2.0-flash-lite',
+]
 
 
 def now_jst() -> datetime:
