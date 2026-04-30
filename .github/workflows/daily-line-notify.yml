@@ -1,11 +1,13 @@
-name: Daily LINE Paper Notification
+name: Daily LINE Paper Notification + Pages
 
 on:
   schedule:
-    # 12:05 UTC = 21:05 JST (毎日)
-    # GitHub Actions の cron は数分の揺らぎがあります
+    # 12:05 UTC = 21:05 JST
     - cron: '5 12 * * *'
   workflow_dispatch:  # GitHub UI から手動実行も可能
+
+permissions:
+  contents: write   # docs/index.html を commit & push するために必要
 
 jobs:
   notify:
@@ -14,14 +16,28 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      - name: Send LINE notification
+      - name: Generate page and send LINE notification
         env:
           LINE_CHANNEL_ACCESS_TOKEN: ${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}
           LINE_USER_ID: ${{ secrets.LINE_USER_ID }}
         run: python notify.py
+
+      - name: Commit docs/index.html if changed
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add docs/index.html
+          if ! git diff --cached --quiet; then
+            git commit -m "Daily paper update: $(date -u +'%Y-%m-%d %H:%M UTC')"
+            git push
+          else
+            echo "No changes to commit"
+          fi
