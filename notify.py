@@ -31,8 +31,9 @@ ARXIV_QUERY = (
 )
 ARXIV_URL = (
     f'http://export.arxiv.org/api/query?search_query={ARXIV_QUERY}'
-    '&sortBy=submittedDate&sortOrder=descending&max_results=5'
+    '&sortBy=submittedDate&sortOrder=descending&max_results=20'
 )
+HISTORY_PATH = Path('docs') / 'posted-papers.json'
 NS = {'atom': 'http://www.w3.org/2005/Atom'}
 JST = timezone(timedelta(hours=9))
 
@@ -50,19 +51,11 @@ def now_jst() -> datetime:
 
 
 # ---------- arXiv ----------
-def fetch_latest_paper():
-    print(f'[{now_jst().isoformat()}] Querying arXiv...')
-    with urllib.request.urlopen(ARXIV_URL, timeout=30) as resp:
-        xml_text = resp.read().decode('utf-8')
-
-    root = ET.fromstring(xml_text)
-    entries = root.findall('atom:entry', NS)
-    if not entries:
-        return None
-
-    e = entries[0]
+def _entry_to_paper(e) -> dict:
     title = ' '.join((e.findtext('atom:title', '', NS) or '').split())
     arxiv_id = (e.findtext('atom:id', '', NS) or '').replace('http://arxiv.org/abs/', '').strip()
+    # Strip version suffix v1, v2, ... from arxiv_id key for dedup matching
+    base_id = arxiv_id.split('v')[0] if 'v' in arxiv_id else arxiv_id
     abstract = ' '.join((e.findtext('atom:summary', '', NS) or '').split())
 
     authors = []
@@ -81,10 +74,42 @@ def fetch_latest_paper():
     return {
         'title': title,
         'arxiv_id': arxiv_id,
+        'base_id': base_id,
         'abstract': abstract,
         'authors': authors,
         'pub_date': pub_date,
     }
+
+
+def fetch_candidate_papers() -> list:
+    print(f'[{now_jst().isoformat()}] Querying arXiv...')
+    with urllib.request.urlopen(ARXIV_URL, timeout=30) as resp:
+        xml_text = resp.read().decode('utf-8')
+    root = ET.fromstring(xml_text)
+    return [_entry_to_paper(e) for e in root.findall('atom:entry', NS)]
+
+
+def load_history() -> list:
+    if not HISTORY_PATH.exists():
+        return []
+    try:
+        return json.loads(HISTORY_PATH.read_text(encoding='utf-8'))
+    except Exception as e:
+        print(f'WARN: history file unreadable, treating as empty: {e}', file=sys.stderr)
+        return []
+
+
+def save_history(history: list) -> None:
+    HISTORY_PATH.parent.mkdir(exist_ok=True)
+    HISTORY_PATH.write_text(json.dumps(history, ensure_ascii=False, indent=2), encoding='utf-8')
+
+
+def pick_unposted_paper(candidates: list, history: list) -> dict | None:
+    posted_ids = {h.get('base_id') or (h.get('arxiv_id', '').split('v')[0]) for h in history}
+    for p in candidates:
+        if p['base_id'] not in posted_ids:
+            return p
+    return None  # All recent papers already posted
 
 
 # ---------- Gemini ----------
@@ -416,16 +441,99 @@ def build_html(paper: dict, commentary: dict, today: str) -> str:
     )
 
 
-def write_html(html_text: str) -> None:
+def write_html(html_text: str, today: str) -> tuple:
+    """Save the daily page as docs/papers/{today}.html (永続) and copy to docs/index.html (latest)."""
     docs = Path('docs')
-    docs.mkdir(exist_ok=True)
-    out = docs / 'index.html'
-    out.write_text(html_text, encoding='utf-8')
-    print(f'Wrote {out}  ({out.stat().st_size} bytes)')
+    papers_dir = docs / 'papers'
+    papers_dir.mkdir(parents=True, exist_ok=True)
+
+    dated = papers_dir / f'{today}.html'
+    dated.write_text(html_text, encoding='utf-8')
+    print(f'Wrote {dated}  ({dated.stat().st_size} bytes)')
+
+    index = docs / 'index.html'
+    index.write_text(html_text, encoding='utf-8')
+    print(f'Wrote {index} (mirror of latest)')
+
     nojekyll = docs / '.nojekyll'
     if not nojekyll.exists():
         nojekyll.write_text('', encoding='utf-8')
         print(f'Wrote {nojekyll}')
+
+    return dated, index
+
+
+ARCHIVE_TEMPLATE = '''<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>論文アーカイブ — Daily EV Inverter Papers</title>
+<style>
+  :root {{ color-scheme: light; }}
+  * {{ box-sizing: border-box; }}
+  body {{
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", "Segoe UI", system-ui, sans-serif;
+    color: #1a1a1a;
+    background: #fafaf7;
+    line-height: 1.7;
+    font-size: 16px;
+    -webkit-text-size-adjust: 100%;
+  }}
+  .wrap {{ max-width: 760px; margin: 0 auto; padding: 24px 20px 80px; }}
+  h1 {{ font-size: 22px; margin: 0 0 6px; }}
+  p.lead {{ color: #666; font-size: 14px; margin: 0 0 24px; }}
+  ul.papers {{ list-style: none; padding: 0; margin: 0; }}
+  ul.papers li {{
+    background: #ffffff;
+    border: 1px solid #e3e0d8;
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+  }}
+  ul.papers a {{ color: #1a1a1a; text-decoration: none; display: block; }}
+  ul.papers a:hover {{ background: #fff5e6; }}
+  .date {{ font-size: 12px; color: #c75b00; font-weight: 700; letter-spacing: 0.04em; }}
+  .ttl {{ font-size: 15px; margin-top: 4px; line-height: 1.45; }}
+  .nav {{ margin-bottom: 18px; }}
+  .nav a {{ color: #c75b00; font-size: 13px; }}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="nav"><a href="./">← 最新の論文へ</a></div>
+  <h1>📚 論文アーカイブ</h1>
+  <p class="lead">これまでに通知されたEVインバータ・パワーモジュール関連論文の一覧({count} 件)</p>
+  <ul class="papers">
+    {items}
+  </ul>
+</div>
+</body>
+</html>
+'''
+
+
+def write_archive(history: list) -> None:
+    """Regenerate docs/archive.html from history (newest first)."""
+    docs = Path('docs')
+    docs.mkdir(exist_ok=True)
+    items_html = []
+    for h in reversed(history):  # newest first
+        date = html.escape(h.get('date', ''))
+        title = html.escape(h.get('title', '(no title)'))
+        items_html.append(
+            f'<li><a href="papers/{date}.html">'
+            f'<span class="date">{date}</span>'
+            f'<div class="ttl">{title}</div>'
+            f'</a></li>'
+        )
+    out = docs / 'archive.html'
+    out.write_text(
+        ARCHIVE_TEMPLATE.format(count=len(history), items='\n    '.join(items_html)),
+        encoding='utf-8',
+    )
+    print(f'Wrote {out}')
 
 
 # ---------- LINE ----------
@@ -468,10 +576,18 @@ def main() -> None:
         print('ERROR: LINE_CHANNEL_ACCESS_TOKEN / LINE_USER_ID / GEMINI_API_KEY env vars missing', file=sys.stderr)
         sys.exit(1)
 
-    paper = fetch_latest_paper()
-    if not paper:
+    candidates = fetch_candidate_papers()
+    if not candidates:
         print('No paper found. Skip.')
         return
+
+    history = load_history()
+    paper = pick_unposted_paper(candidates, history)
+    if paper is None:
+        print(f'All {len(candidates)} candidate papers already posted (history={len(history)}). Skip notification.')
+        return
+
+    print(f'Selected: {paper["arxiv_id"]} - {paper["title"][:60]}')
 
     try:
         commentary = call_gemini(gemini_key, paper)
@@ -480,9 +596,23 @@ def main() -> None:
         commentary = fallback_commentary(paper)
 
     today = now_jst().strftime('%Y-%m-%d')
-    write_html(build_html(paper, commentary, today))
+    write_html(build_html(paper, commentary, today), today)
+
+    # Update history
+    history.append({
+        'date': today,
+        'arxiv_id': paper['arxiv_id'],
+        'base_id': paper['base_id'],
+        'title': paper['title'],
+        'pub_date': paper['pub_date'],
+    })
+    save_history(history)
+    write_archive(history)
 
     pages = github_pages_url()
+    dated_url = f'{pages}papers/{today}.html' if pages else ''
+    archive_url = f'{pages}archive.html' if pages else ''
+
     msg_lines = [
         f"📄 本日の論文 ({today})",
         '',
@@ -491,8 +621,10 @@ def main() -> None:
         commentary.get('summary_short', ''),
         '',
     ]
-    if pages:
-        msg_lines += ['▼ 図入り解説(モバイル対応)', pages, '']
+    if dated_url:
+        msg_lines += ['▼ 図入り解説(モバイル対応・永続URL)', dated_url, '']
+    if archive_url:
+        msg_lines += ['▼ 過去の論文一覧', archive_url, '']
     msg_lines += ['▼ arXiv 原論文', f"https://arxiv.org/abs/{paper['arxiv_id']}"]
     msg = '\n'.join(msg_lines)
 
