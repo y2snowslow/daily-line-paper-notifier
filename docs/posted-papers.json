@@ -5,5 +5,12 @@
     "base_id": "2511.08405",
     "title": "Active Short Circuit and Safe Discharge Mechanisms in Multi-Phase Inverters During Critical Failures",
     "pub_date": "2025-11-12"
+  },
+  {
+    "date": "2026-05-12",
+    "arxiv_id": "2507.03573v1",
+    "base_id": "2507.03573",
+    "title": "Optimization-Based Comparative System Evaluation of Single and Dual Traction Inverters with Focus on Partial Load Efficiency and Chip Area",
+    "pub_date": "2025-07-04"
   }
 ]
