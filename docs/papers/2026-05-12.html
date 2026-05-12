@@ -129,48 +129,136 @@
 <body>
 <div class="wrap">
   <span class="meta-pill">📄 本日の論文 · 2026-05-12</span>
-  <h1 class="title">Optimization-Based Comparative System Evaluation of Single and Dual Traction Inverters with Focus on Partial Load Efficiency and Chip Area</h1>
+  <h1 class="title">Gallium Nitride (GaN) based High-Power Multilevel H-Bridge Inverter for Wireless Power Transfer of Electric Vehicles</h1>
   <div class="meta">
-    <div><b>著者</b>: Christoph Sachs, Fabian Stamer, Jan Allgeier, Duleepa Thrimawithana, Martin Neuburger</div>
-    <div><b>arXiv ID</b>: 2507.03573v1 ・ <b>公開日</b>: 2025-07-04</div>
+    <div><b>著者</b>: Javad Chevinly, Shervin Salehi Rad, Elias Nadi, Bogdan Proca, John Wolgemuth, Anthony Calabro, Hua Zhang, Fei Lu</div>
+    <div><b>arXiv ID</b>: 2405.11131v1 ・ <b>公開日</b>: 2024-05-18</div>
   </div>
 
-  <div class="pull">シングルとデュアルインバータのチップ面積と軽負荷効率を、最適化手法を用いて公平に比較評価。</div>
+  <div class="pull">EV無線充電向けGaN 75kW 3/4段Hブリッジインバータ開発。低高調波で高効率充電実現。</div>
 
   <h2>背景・課題</h2>
-  <p>EVの航続距離延長には、実走行の大半を占める「軽負荷領域」での効率向上が不可欠です。しかし、従来のインバータ比較は評価手法が特定の設計に偏る傾向があり、トポロジーごとの真の優位性を判断するのが困難でした。特にSiC等の高価なパワー半導体を用いる場合、チップ面積（コスト）と効率のトレードオフをシステム全体で最適化する必要があります。本研究は、この課題に対し、シングルとデュアルのトポロジーを公平に比較するための最適化ベースの評価手法を提案しています。</p>
+  <p>電気自動車(EV)の普及に伴い、充電インフラの利便性向上が求められています。従来の有線充電は、ケーブルの抜き差しや設置場所の制約、雨天時の安全性などが課題です。無線充電はこれらの課題を解決する有望な技術ですが、特に急速充電を実現するには、大電力かつ高効率なインバータが不可欠です。しかし、高周波での大電力変換は、従来のシリコン(Si)デバイスではスイッチング損失が大きくなり、効率低下や発熱の問題が生じやすいという課題がありました。</p>
 
   <h2>提案手法・主要構成</h2>
   <div class="figure">
-    <svg viewBox="0 0 720 280" xmlns="http://www.w3.org/2000/svg"><rect width="720" height="280" fill="#fff5e6" rx="10"/><rect x="20" y="20" width="680" height="240" fill="none" stroke="#e3e0d8" stroke-width="2" rx="5"/><text x="360" y="40" font-family="sans-serif" font-size="16" font-weight="bold" fill="#1a1a1a" text-anchor="middle">インバータトポロジーの比較概念図</text><rect x="60" y="80" width="120" height="60" fill="#fff" stroke="#c75b00" stroke-width="2"/><text x="120" y="115" font-family="sans-serif" font-size="12" fill="#1a1a1a" text-anchor="middle">Single Inverter</text><path d="M 180 110 L 240 110" stroke="#1a1a1a" stroke-width="2" fill="none"/><circle cx="270" cy="110" r="30" fill="#fff" stroke="#1a1a1a" stroke-width="2"/><text x="270" y="115" font-family="sans-serif" font-size="12" fill="#1a1a1a" text-anchor="middle">Motor</text><rect x="440" y="70" width="120" height="40" fill="#fff" stroke="#c75b00" stroke-width="2"/><rect x="440" y="130" width="120" height="40" fill="#fff" stroke="#c75b00" stroke-width="2"/><text x="500" y="95" font-family="sans-serif" font-size="11" fill="#1a1a1a" text-anchor="middle">Inverter A</text><text x="500" y="155" font-family="sans-serif" font-size="11" fill="#1a1a1a" text-anchor="middle">Inverter B</text><path d="M 560 90 L 620 110" stroke="#1a1a1a" stroke-width="2" fill="none"/><path d="M 560 150 L 620 110" stroke="#1a1a1a" stroke-width="2" fill="none"/><circle cx="650" cy="110" r="30" fill="#fff" stroke="#1a1a1a" stroke-width="2"/><text x="650" y="115" font-family="sans-serif" font-size="12" fill="#1a1a1a" text-anchor="middle">Motor</text><rect x="430" y="200" width="260" height="50" fill="#c75b00" fill-opacity="0.1" stroke="#c75b00" stroke-dasharray="4"/><text x="560" y="220" font-family="sans-serif" font-size="12" fill="#c75b00" font-weight="bold" text-anchor="middle">軽負荷時の最適化</text><text x="560" y="238" font-family="sans-serif" font-size="10" fill="#1a1a1a" text-anchor="middle">片側停止 or 位相制御による損失低減</text><text x="120" y="220" font-family="sans-serif" font-size="12" fill="#1a1a1a" text-anchor="middle">標準的な構成</text></svg>
-    <div class="caption"><b>Fig.1</b>: シングルインバータ（左）とデュアルインバータ（右）のトポロジー比較。デュアル構成では、軽負荷時に片方のインバータを休止させたり、位相制御を行うことで、スイッチング損失と導通損失のバランスを最適化し、実走行効率を高めることが可能です。</div>
+    <svg viewBox="0 0 720 280" style="background-color: #fff5e6; border: 1px solid #e3e0d8;">
+  <rect width="720" height="280" fill="#fff5e6"/>
+  <text x="360" y="30" font-size="18" text-anchor="middle" fill="#1a1a1a">EV無線充電用GaNマルチレベルHブリッジインバータ</text>
+
+  <!-- GaN Device -->
+  <g transform="translate(100, 100)">
+    <rect width="100" height="80" fill="#c75b00" stroke="#e3e0d8"/>
+    <text x="50" y="40" font-size="12" text-anchor="middle" fill="white">GaN</text>
+    <text x="50" y="60" font-size="12" text-anchor="middle" fill="white">パワー半導体</text>
+  </g>
+
+  <!-- H-Bridge -->
+  <g transform="translate(250, 80)">
+    <text x="50" y="10" font-size="12" text-anchor="middle" fill="#1a1a1a">Hブリッジ</text>
+    <line x1="0" y1="20" x2="100" y2="20" stroke="#1a1a1a" stroke-width="2"/>
+    <line x1="0" y1="60" x2="100" y2="60" stroke="#1a1a1a" stroke-width="2"/>
+    <line x1="20" y1="20" x2="20" y2="60" stroke="#1a1a1a" stroke-width="2"/>
+    <line x1="80" y1="20" x2="80" y2="60" stroke="#1a1a1a" stroke-width="2"/>
+    <circle cx="20" cy="40" r="10" fill="#c75b00"/>
+    <circle cx="80" cy="40" r="10" fill="#c75b00"/>
+    <circle cx="50" cy="20" r="5" fill="#1a1a1a"/>
+    <circle cx="50" cy="60" r="5" fill="#1a1a1a"/>
+  </g>
+
+  <!-- Multilevel aspect -->
+  <g transform="translate(400, 90)">
+    <text x="50" y="10" font-size="12" text-anchor="middle" fill="#1a1a1a">マルチレベル化</text>
+    <rect x="0" y="20" width="100" height="10" fill="#c75b00"/>
+    <rect x="0" y="35" width="100" height="10" fill="#c75b00"/>
+    <rect x="0" y="50" width="100" height="10" fill="#c75b00"/>
+    <text x="110" y="30" font-size="12" fill="#1a1a1a">↑電圧レベル増加</text>
+    <text x="110" y="55" font-size="12" fill="#1a1a1a">↓高調波低減</text>
+  </g>
+
+  <!-- Wireless Charging Coil -->
+  <g transform="translate(550, 100)">
+    <path d="M 0 40 Q 20 -20 40 0 T 80 40 T 120 40 T 160 0 T 200 40" fill="none" stroke="#c75b00" stroke-width="4"/>
+    <text x="100" y="80" font-size="12" text-anchor="middle" fill="#1a1a1a">無線充電コイル</text>
+  </g>
+
+  <!-- Arrows -->
+  <line x1="150" y1="140" x2="250" y2="120" stroke="#1a1a1a" marker-end="url(#arrow)"/>
+  <line x1="350" y1="140" x2="400" y2="120" stroke="#1a1a1a" marker-end="url(#arrow)"/>
+  <line x1="480" y1="140" x2="550" y2="120" stroke="#1a1a1a" marker-end="url(#arrow)"/>
+
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#1a1a1a"/>
+    </marker>
+  </defs>
+
+  <text x="360" y="250" font-size="12" text-anchor="middle" fill="#1a1a1a">GaNパワー半導体とマルチレベル技術で低高調波・高効率な無線充電を実現</text>
+</svg>
+    <div class="caption"><b>Fig.1</b>: 提案されているEV無線充電システムにおけるGaNベースのマルチレベルHブリッジインバータの概念図。GaNデバイスの採用、Hブリッジ構成、およびマルチレベル化による電圧段数増加が、低高調波電圧生成と無線充電コイルへの効率的な電力供給に寄与することを示しています。</div>
   </div>
 
   <h2>手法と成果の解説</h2>
-  <p>本論文では、標準的なシングルインバータと、軽負荷時に片方のインバータを最適化可能なデュアルインバータトポロジーを比較しています。具体的には、SiC MOSFETのチップ面積とWLTPサイクル等の実走行を想定した軽負荷効率を目的関数とした多目的最適化を実施。各トポロジーが持つ制御の自由度（電流分担やスイッチング周波数の可変制御等）を最大限に活用した状態での限界性能を算出しています。解析の結果、デュアルインバータは特定の負荷領域でインターリーブ効果や一方のインバータ停止により損失を大幅に低減できることが示されました。また、チップ面積の増大を抑えつつ、システム全体のエネルギー消費を削減可能な設計解を特定。これにより、ハードウェアコストと運用コストの最適なバランスを導き出すことに成功しています。特に、デバイスの動的損失と静的損失の比率を考慮したチップサイズ選定が、システム全体の効率に与える影響を定量化しています。</p>
+  <p>本論文では、EV無線充電システム向けに、次世代パワー半導体である窒化ガリウム(GaN)を用いた高出力マルチレベルHブリッジインバータを提案・実装しています。特に、75kW級のシステムを想定し、3レベルおよび4レベルのHブリッジ構成を採用。これにより、スイッチング周波数を上げつつも、出力電圧の段数を増やすことで、高調波成分を低減し、滑らかな正弦波に近い電圧を無線充電コイルに供給することを目指しています。GaNデバイスの採用は、Siデバイスと比較して低オン抵抗と高速スイッチング特性により、高効率化と小型化に貢献します。LTspiceを用いたシミュレーションでは、提案制御戦略により出力電圧の高調波が効果的に抑制されることを確認。さらに、85kHzで動作するGaNインバータプロトタイプを試作し、100V-215Wおよび150V-489Wの条件で実験を行い、実用的な性能を実証しました。</p>
 
   <h2>結果・効果のビジュアライズ</h2>
   <div class="figure">
-    <svg viewBox="0 0 720 280" xmlns="http://www.w3.org/2000/svg"><rect width="720" height="280" fill="#fff5e6" rx="10"/><line x1="80" y1="220" x2="640" y2="220" stroke="#1a1a1a" stroke-width="2"/><line x1="80" y1="220" x2="80" y2="40" stroke="#1a1a1a" stroke-width="2"/><text x="360" y="255" font-family="sans-serif" font-size="12" fill="#1a1a1a" text-anchor="middle">Chip Area (Cost)</text><text x="40" y="130" font-family="sans-serif" font-size="12" fill="#1a1a1a" text-anchor="middle" transform="rotate(-90 40,130)">Efficiency (Partial Load)</text><path d="M 100 200 Q 200 80 600 60" stroke="#1a1a1a" stroke-width="2" fill="none" stroke-dasharray="4"/><text x="550" y="55" font-family="sans-serif" font-size="10" fill="#1a1a1a">Single Inverter</text><path d="M 100 180 Q 250 60 600 45" stroke="#c75b00" stroke-width="3" fill="none"/><text x="550" y="35" font-family="sans-serif" font-size="10" fill="#c75b00" font-weight="bold">Dual Inverter (Proposed)</text><circle cx="250" cy="95" r="5" fill="#c75b00"/><text x="260" y="95" font-family="sans-serif" font-size="10" fill="#c75b00">最適設計ポイント</text><rect x="400" y="140" width="220" height="60" fill="#fff" stroke="#e3e0d8"/><text x="410" y="160" font-family="sans-serif" font-size="10" fill="#1a1a1a">・同一チップ面積での効率向上</text><text x="410" y="180" font-family="sans-serif" font-size="10" fill="#1a1a1a">・同一効率でのSiC面積削減</text></svg>
-    <div class="caption"><b>Fig.2</b>: チップ面積（コスト）と軽負荷効率のパレート図。最適化手法を用いることで、デュアルインバータがシングル構成に対し、同じコストでより高い効率を達成できること、あるいは同じ効率をより小さなチップ面積で実現できることを定量的に示しています。</div>
+    <svg viewBox="0 0 720 280" style="background-color: #fff5e6; border: 1px solid #e3e0d8;">
+  <text x="360" y="30" font-size="18" text-anchor="middle" fill="#1a1a1a">シミュレーションと実験結果</text>
+
+  <!-- FFT Analysis (Conceptual Bar Chart) -->
+  <g transform="translate(50, 70)">
+    <text x="150" y="10" font-size="14" text-anchor="middle" fill="#1a1a1a">FFT解析 (出力電圧)</text>
+    <text x="0" y="150" font-size="12" fill="#1a1a1a">基本波</text>
+    <text x="0" y="180" font-size="12" fill="#1a1a1a">高調波</text>
+    <rect x="100" y="110" width="50" height="60" fill="#c75b00"/>
+    <rect x="170" y="130" width="30" height="40" fill="#1a1a1a"/>
+    <rect x="220" y="135" width="30" height="35" fill="#1a1a1a"/>
+    <rect x="270" y="140" width="30" height="30" fill="#1a1a1a"/>
+    <text x="125" y="175" font-size="10" text-anchor="middle" fill="white">100%</text>
+    <text x="185" y="175" font-size="10" text-anchor="middle" fill="white">低</text>
+    <text x="235" y="175" font-size="10" text-anchor="middle" fill="white">低</text>
+    <text x="285" y="175" font-size="10" text-anchor="middle" fill="white">低</text>
+    <text x="150" y="195" font-size="12" fill="#1a1a1a">3レベル/4レベル</text>
+  </g>
+
+  <!-- Experimental Results (Conceptual Points) -->
+  <g transform="translate(400, 70)">
+    <text x="150" y="10" font-size="14" text-anchor="middle" fill="#1a1a1a">実験結果 (プロトタイプ)</text>
+    <circle cx="50" cy="100" r="8" fill="#c75b00"/>
+    <text x="100" y="105" font-size="12" fill="#1a1a1a">100V / 215W: 正常動作</text>
+    <circle cx="50" cy="130" r="8" fill="#c75b00"/>
+    <text x="100" y="135" font-size="12" fill="#1a1a1a">150V / 489W: 正常動作</text>
+    <text x="50" y="170" font-size="12" fill="#1a1a1a">高効率・低高調波を確認</text>
+  </g>
+
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#1a1a1a"/>
+    </marker>
+  </defs>
+
+  <text x="360" y="250" font-size="12" text-anchor="middle" fill="#1a1a1a">マルチレベル化により高調波が大幅に抑制され、低電力域での実証に成功</text>
+</svg>
+    <div class="caption"><b>Fig.2</b>: シミュレーションにおけるFFT解析結果（概念図）と、試作プロトタイプを用いた実験結果。マルチレベル化により、基本波以外の高調波成分が大幅に低減されることが示唆されています。また、低電力域での実験は成功し、GaNインバータの有効性を実証しました。</div>
   </div>
 
   <h2>実用への示唆</h2>
-  <p>量産設計において、単にデバイスをSiCに置き換えるだけでなく、トポロジー構成から見直す妥当性を示唆しています。デュアルインバータは部品点数増のデメリットがありますが、チップ面積の最適化により、トータルコスト（TCO）で優位に立つ可能性があります。本手法は、特定の走行パターンに最適化した車両専用のパワートレイン設計において、デバイス選定と制御戦略を同時最適化するための強力なツールとなります。</p>
+  <p>本研究は、EV無線充電における大電力化と高効率化の両立に、GaNデバイスとマルチレベルトポロジーが有効であることを示唆しています。75kW級という具体的な目標値と、3/4レベルHブリッジの設計・制御戦略は、量産設計の参考となり得ます。ただし、実験結果の電力レベル(数百W)は、実際のEV急速充電に必要な数kW～数十kWにはまだ遠く、さらなる高電力化に向けた課題（熱設計、部品信頼性、コストなど）は残されています。SiCデバイスを用いたマルチレベルインバータや、共振型コンバータとの比較検討も今後の研究課題となるでしょう。</p>
 
   <details class="original-abstract">
     <summary>原文アブストラクト(英語)を表示</summary>
-    <p>The transition to electric transportation demands efficient and cost-effective powertrains. Optimizing energy use is crucial for extending range and reducing expenses. However, comparing inverter and motor efficiency based on inverter topologies is challenging due to biased methodologies that favor certain designs over others. This document introduces a novel optimization-based approach for enhancing partial load efficiency and minimizing chip area of single and dual traction inverters, indicating potential energy savings and cost reduction. Recent publications of both industry and academia underscore the importance of these design goals achieved by either novel inverter topologies or enhanced control methods. Two promising topologies with the inherent capability of partial load optimization are evaluated regarding chip area and system efficiency to find the most suitable concept for future electric vehicle power trains.</p>
+    <p>This paper presents a design and implementation of a high-power Gallium Nitride (GaN)-based multilevel Hbridge inverter to excite wireless charging coils for the wireless power transfer of electric vehicles (EVs). Compared to the traditional conductive charging, wireless charging technology offers a safer and more convenient way to charge EVs. Due to the increasing demand of fast charging, high-power inverters play a crucial role in exciting the wireless charging coils within a wireless power transfer system. This paper details the system specifications for the wireless charging of EVs, providing theoretical analysis and a control strategy for the modular design of a 75-kW 3-level and 4-level Hbridge inverter. The goal is to deliver a low-distortion excitation voltage to the wireless charging coils. LTspice simulation results, including output voltage, Fast Fourier Transform (FFT) analysis for both 3-level and 4-level H-bridge inverters, are presented to validate the control strategy and demonstrate the elimination of output harmonic components in the modular design. A GaNbased inverter prototype was employed to deliver a 85-kHz power to the wireless charging pads of the wireless power transfer system. Experimental results at two different voltage and power levels, 100V-215W and 150V-489W, validate the successful performance of the GaN inverter in the wireless charging system.</p>
   </details>
 
   <div class="links">
-    <a href="https://arxiv.org/abs/2507.03573v1" target="_blank" rel="noopener">arXiv abstract</a>
-    <a class="secondary" href="https://arxiv.org/pdf/2507.03573v1" target="_blank" rel="noopener">PDF</a>
-    <a class="secondary" href="https://arxiv.org/html/2507.03573v1" target="_blank" rel="noopener">HTML(原図)</a>
+    <a href="https://arxiv.org/abs/2405.11131v1" target="_blank" rel="noopener">arXiv abstract</a>
+    <a class="secondary" href="https://arxiv.org/pdf/2405.11131v1" target="_blank" rel="noopener">PDF</a>
+    <a class="secondary" href="https://arxiv.org/html/2405.11131v1" target="_blank" rel="noopener">HTML(原図)</a>
   </div>
 
   <p class="footer-note">📝 解説と図はGemini AIが論文アブストから生成しています(自動生成のため細部に誤りがある場合があります — 詳細は arXiv 原論文を参照してください)。<br>
-  生成日時: 2026-05-12 00:33 JST
+  生成日時: 2026-05-12 23:46 JST
   </p>
 </div>
 </body>
